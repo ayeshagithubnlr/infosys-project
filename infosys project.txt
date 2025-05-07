@@ -1,0 +1,4013 @@
+database
+
+
+
+-- Users Table
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_login_date DATETIME,
+    mfa_enabled BOOLEAN DEFAULT FALSE,
+    mfa_secret VARCHAR(255),
+    department VARCHAR(100),
+    position VARCHAR(100),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+-- User Roles Table
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id BIGINT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (user_id, role),
+    CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- Job Postings Table
+CREATE TABLE IF NOT EXISTS job_postings (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    job_id VARCHAR(50) NOT NULL UNIQUE,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    requirements TEXT,
+    responsibilities TEXT,
+    location VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    employment_type VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    posting_date DATE,
+    closing_date DATE,
+    salary_range VARCHAR(100),
+    experience_level VARCHAR(50),
+    created_by BIGINT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_job_postings_user FOREIGN KEY (created_by) REFERENCES users (id)
+);
+
+-- Candidates Table
+CREATE TABLE IF NOT EXISTS candidates (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    phone VARCHAR(20),
+    current_company VARCHAR(100),
+    current_position VARCHAR(100),
+    years_of_experience INT,
+    skills TEXT,
+    linkedin_url VARCHAR(255),
+    portfolio_url VARCHAR(255),
+    education_details TEXT,
+    data_consent BOOLEAN DEFAULT FALSE,
+    data_retention_date DATETIME,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+-- Applications Table
+CREATE TABLE IF NOT EXISTS applications (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    application_id VARCHAR(50) NOT NULL UNIQUE,
+    job_posting_id BIGINT NOT NULL,
+    candidate_id BIGINT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    cover_letter TEXT,
+    additional_notes TEXT,
+    is_withdrawn BOOLEAN DEFAULT FALSE,
+    withdrawn_date DATETIME,
+    rejection_reason VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_applications_job_posting FOREIGN KEY (job_posting_id) REFERENCES job_postings (id),
+    CONSTRAINT fk_applications_candidate FOREIGN KEY (candidate_id) REFERENCES candidates (id)
+);
+
+-- Interviews Table
+CREATE TABLE IF NOT EXISTS interviews (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    application_id BIGINT NOT NULL,
+    interview_type VARCHAR(50) NOT NULL,
+    scheduled_date DATETIME NOT NULL,
+    duration_minutes INT,
+    location VARCHAR(255),
+    interview_link VARCHAR(255),
+    notes TEXT,
+    status VARCHAR(50) NOT NULL,
+    preparation_materials TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_interviews_application FOREIGN KEY (application_id) REFERENCES applications (id)
+);
+
+-- Interview Interviewers Table (Many-to-Many)
+CREATE TABLE IF NOT EXISTS interview_interviewers (
+    interview_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    PRIMARY KEY (interview_id, user_id),
+    CONSTRAINT fk_interview_interviewers_interview FOREIGN KEY (interview_id) REFERENCES interviews (id) ON DELETE CASCADE,
+    CONSTRAINT fk_interview_interviewers_user FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- Feedbacks Table
+CREATE TABLE IF NOT EXISTS feedbacks (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    interview_id BIGINT NOT NULL,
+    interviewer_id BIGINT NOT NULL,
+    technical_rating INT,
+    communication_rating INT,
+    culture_fit_rating INT,
+    overall_rating INT NOT NULL,
+    strengths TEXT,
+    areas_for_improvement TEXT,
+    comments TEXT,
+    recommendation VARCHAR(50) NOT NULL,
+    is_shared_with_candidate BOOLEAN DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_feedbacks_interview FOREIGN KEY (interview_id) REFERENCES interviews (id),
+    CONSTRAINT fk_feedbacks_interviewer FOREIGN KEY (interviewer_id) REFERENCES users (id)
+);
+
+-- Documents Table
+CREATE TABLE IF NOT EXISTS documents (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    candidate_id BIGINT,
+    application_id BIGINT,
+    document_type VARCHAR(50) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_size BIGINT,
+    mime_type VARCHAR(100),
+    is_signed BOOLEAN DEFAULT FALSE,
+    signed_date DATETIME,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_documents_candidate FOREIGN KEY (candidate_id) REFERENCES candidates (id),
+    CONSTRAINT fk_documents_application FOREIGN KEY (application_id) REFERENCES applications (id)
+);
+
+-- Talent Pools Table
+CREATE TABLE IF NOT EXISTS talent_pools (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    category VARCHAR(100),
+    skill_tags TEXT,
+    created_by BIGINT,
+    last_engaged_date DATETIME,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_talent_pools_user FOREIGN KEY (created_by) REFERENCES users (id)
+);
+
+-- Talent Pool Candidates Table (Many-to-Many)
+CREATE TABLE IF NOT EXISTS talent_pool_candidates (
+    talent_pool_id BIGINT NOT NULL,
+    candidate_id BIGINT NOT NULL,
+    PRIMARY KEY (talent_pool_id, candidate_id),
+    CONSTRAINT fk_talent_pool_candidates_talent_pool FOREIGN KEY (talent_pool_id) REFERENCES talent_pools (id) ON DELETE CASCADE,
+    CONSTRAINT fk_talent_pool_candidates_candidate FOREIGN KEY (candidate_id) REFERENCES candidates (id) ON DELETE CASCADE
+);
+
+-- Email Templates Table
+CREATE TABLE IF NOT EXISTS email_templates (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    subject VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+-- Audit Logs Table
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(100) NOT NULL,
+    entity_id BIGINT,
+    details TEXT,
+    ip_address VARCHAR(50),
+    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_audit_logs_user FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+-- Insert Default Admin User
+INSERT INTO users (username, password, email, first_name, last_name, is_active)
+VALUES ('admin', '$2a$10$uLB7gm8UF97UEfOgA0V2IuEzjqqCpY9Oe4XqnANTEaaVJRNuLwAT.', 'admin@example.com', 'Admin', 'User', true);
+
+-- Insert Default Roles for Admin
+INSERT INTO user_roles (user_id, role) VALUES (1, 'ROLE_ADMIN');
+
+-- Insert Default Email Templates
+INSERT INTO email_templates (name, subject, content)
+VALUES ('application_confirmation', 'Application Received: {{jobTitle}}', 
+        '<p>Dear {{candidateName}},</p><p>Thank you for applying to the {{jobTitle}} position at our company. Your application has been received, and your application ID is {{applicationId}}.</p><p>We will review your application and get back to you soon.</p><p>Best regards,<br>HR Team</p>');
+
+INSERT INTO email_templates (name, subject, content)
+VALUES ('interview_invitation', 'Interview Invitation: {{jobTitle}}', 
+        '<p>Dear {{candidateName}},</p><p>We are pleased to invite you for a {{interviewType}} interview for the {{jobTitle}} position. The interview is scheduled for {{interviewDateTime}}.</p><p>Please confirm your availability for this interview.</p><p>Best regards,<br>HR Team</p>');
+
+INSERT INTO email_templates (name, subject, content)
+VALUES ('status_update', 'Application Status Update: {{jobTitle}}', 
+        '<p>Dear {{candidateName}},</p><p>This is to inform you that your application for the {{jobTitle}} position has been updated to {{status}}.</p><p>Best regards,<br>HR Team</p>');
+
+
+
+
+main
+
+package com.hrpipeline;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@SpringBootApplication
+@EnableAsync
+@EnableScheduling
+@EnableConfigurationProperties
+public class HrPipelineApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(HrPipelineApplication.class, args);
+    }
+}
+
+
+Created src/main/java/com/hrpipeline/config/SecurityConfig.java
+
+
+package com.hrpipeline.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    private final UserDetailsService userDetailsService;
+
+    public SecurityConfig(UserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .cors().and()
+            .csrf().disable()
+            .authorizeRequests()
+            .antMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+            .antMatchers("/api/v1/jobs/public/**", "/api/v1/candidates/apply/**").permitAll()
+            .antMatchers("/api/v1/admin/**").hasRole("ADMIN")
+            .antMatchers("/api/v1/hr/**").hasAnyRole("HR", "ADMIN")
+            .antMatchers("/api/v1/hiring-manager/**").hasAnyRole("HIRING_MANAGER", "HR", "ADMIN")
+            .anyRequest().authenticated()
+            .and()
+            .httpBasic()
+            .and()
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
+        configuration.setExposedHeaders(Arrays.asList("x-auth-token"));
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        
+        return source;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+
+
+application.properties
+# Server Configuration
+server.port=5000
+server.servlet.context-path=/api/v1
+
+# Database Configuration
+spring.datasource.url=${DATABASE_URL}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate Configuration
+spring.jpa.show-sql=true
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# Flyway Migration Configuration
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
+spring.flyway.locations=classpath:db/migration
+
+# Logging Configuration
+logging.level.org.springframework=INFO
+logging.level.com.hrpipeline=DEBUG
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+
+# File Upload Configuration
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+file.upload-dir=./uploads
+
+# Email Configuration
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${EMAIL_USERNAME:hr.pipeline@example.com}
+spring.mail.password=${EMAIL_PASSWORD:your_password}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# Swagger Configuration
+springfox.documentation.swagger.v2.path=/api-docs
+springfox.documentation.swagger-ui.enabled=true
+
+# Security Configuration
+jwt.secret=${JWT_SECRET:hr_pipeline_secret_key}
+jwt.expiration=86400000
+
+
+pom.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.8</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    
+    <groupId>com.hrpipeline</groupId>
+    <artifactId>hr-pipeline</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>HR Recruitment Pipeline Manager</name>
+    <description>An HR Recruitment Pipeline Manager with Spring Boot backend, Angular frontend, and PostgreSQL database</description>
+    
+    <properties>
+        <java.version>17</java.version>
+        <jjwt.version>0.9.1</jjwt.version>
+        <modelmapper.version>3.1.0</modelmapper.version>
+        <springdoc.version>1.6.14</springdoc.version>
+    </properties>
+    
+    <dependencies>
+        <!-- Spring Boot Starters -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        
+        <!-- Database -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- Security -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        
+        <!-- Utilities -->
+        <dependency>
+            <groupId>org.modelmapper</groupId>
+            <artifactId>modelmapper</artifactId>
+            <version>${modelmapper.version}</version>
+        </dependency>
+        
+        <!-- API Documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+        
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <configuration>
+                    <url>${env.SPRING_DATASOURCE_URL}</url>
+                    <user>${env.SPRING_DATASOURCE_USERNAME}</user>
+                    <password>${env.SPRING_DATASOURCE_PASSWORD}</password>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+
+Created src/main/java/com/hrpipeline/config/SwaggerConfig.java
+
+package com.hrpipeline.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import springfox.documentation.builders.ApiInfoBuilder;
+import springfox.documentation.builders.PathSelectors;
+import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.service.ApiInfo;
+import springfox.documentation.service.Contact;
+import springfox.documentation.spi.DocumentationType;
+import springfox.documentation.spring.web.plugins.Docket;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+@Configuration
+@EnableSwagger2
+public class SwaggerConfig {
+
+    @Bean
+    public Docket api() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("com.hrpipeline.controller"))
+                .paths(PathSelectors.any())
+                .build()
+                .apiInfo(apiInfo());
+    }
+
+    private ApiInfo apiInfo() {
+        return new ApiInfoBuilder()
+                .title("HR Recruitment Pipeline Manager API")
+                .description("RESTful API for HR Recruitment Pipeline Manager application")
+                .version("1.0.0")
+                .contact(new Contact("HR Tech Team", "http://www.hrpipeline.com", "support@hrpipeline.com"))
+                .build();
+    }
+}
+
+
+
+
+
+Created src/main/java/com/hrpipeline/config/SecurityConfig.java
+
+
+package com.hrpipeline.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    private final UserDetailsService userDetailsService;
+
+    public SecurityConfig(UserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .cors().and()
+            .csrf().disable()
+            .authorizeRequests()
+            .antMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+            .antMatchers("/api/v1/jobs/public/**", "/api/v1/candidates/apply/**").permitAll()
+            .antMatchers("/api/v1/admin/**").hasRole("ADMIN")
+            .antMatchers("/api/v1/hr/**").hasAnyRole("HR", "ADMIN")
+            .antMatchers("/api/v1/hiring-manager/**").hasAnyRole("HIRING_MANAGER", "HR", "ADMIN")
+            .anyRequest().authenticated()
+            .and()
+            .httpBasic()
+            .and()
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
+        configuration.setExposedHeaders(Arrays.asList("x-auth-token"));
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        
+        return source;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+
+
+
+Created src/main/java/com/hrpipeline/config/WebConfig.java
+
+package com.hrpipeline.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+@EnableWebMvc
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:5000")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("swagger-ui.html")
+                .addResourceLocations("classpath:/META-INF/resources/");
+
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/");
+    }
+}
+
+
+
+
+Created src/main/java/com/hrpipeline/config/ModelMapperConfig.java
+
+
+package com.hrpipeline.config;
+
+import org.modelmapper.ModelMapper;
+import org.modelmapper.convention.MatchingStrategies;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class ModelMapperConfig {
+
+    @Bean
+    public ModelMapper modelMapper() {
+        ModelMapper modelMapper = new ModelMapper();
+        
+        // Configure ModelMapper for strict mapping
+        modelMapper.getConfiguration()
+                .setMatchingStrategy(MatchingStrategies.STRICT)
+                .setSkipNullEnabled(true);
+        
+        return modelMapper;
+    }
+}
+
+
+Created src/main/java/com/hrpipeline/entity/User.java
+
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "user")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String username;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
+    @Column
+    private boolean active = true;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/Role.java
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "role")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Role {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @Column
+    private String description;
+
+    public Role(String name) {
+        this.name = name;
+    }
+}
+
+
+Created src/main/java/com/hrpipeline/entity/JobPosting.java
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "job_posting")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class JobPosting {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String description;
+
+    @Column(columnDefinition = "TEXT")
+    private String requirements;
+
+    @Column(columnDefinition = "TEXT")
+    private String responsibilities;
+
+    @Column
+    private String location;
+
+    @Column
+    private String department;
+
+    @Column(name = "employment_type")
+    private String employmentType;
+
+    @Column
+    private boolean active = true;
+
+    @Column(name = "posting_date")
+    private LocalDateTime postingDate;
+
+    @Column(name = "closing_date")
+    private LocalDateTime closingDate;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/Candidate.java
+
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "candidate")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Candidate {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column
+    private String phone;
+
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
+    @Column(name = "resume_url")
+    private String resumeUrl;
+
+    @Column(name = "linkedin_url")
+    private String linkedinUrl;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/Application.java
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "application")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Application {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "job_id", nullable = false)
+    private JobPosting job;
+
+    @ManyToOne
+    @JoinColumn(name = "candidate_id", nullable = false)
+    private Candidate candidate;
+
+    @Column(nullable = false)
+    private String status;
+
+    @Column(name = "cover_letter", columnDefinition = "TEXT")
+    private String coverLetter;
+
+    @Column(name = "application_date")
+    private LocalDateTime applicationDate;
+
+    @Column(name = "last_status_update")
+    private LocalDateTime lastStatusUpdate;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/Interview.java
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "interview")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Interview {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "application_id", nullable = false)
+    private Application application;
+
+    @Column(name = "interview_type", nullable = false)
+    private String interviewType;
+
+    @Column(name = "scheduled_date", nullable = false)
+    private LocalDateTime scheduledDate;
+
+    @Column(nullable = false)
+    private Integer duration; // in minutes
+
+    @Column
+    private String location;
+
+    @Column(name = "meeting_link")
+    private String meetingLink;
+
+    @Column(nullable = false)
+    private String status;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
+
+    @ManyToMany
+    @JoinTable(
+        name = "interview_participants",
+        joinColumns = @JoinColumn(name = "interview_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> participants = new HashSet<>();
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/Feedback.java
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "feedback")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Feedback {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "interview_id", nullable = false)
+    private Interview interview;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(name = "technical_rating")
+    private Integer technicalRating;
+
+    @Column(name = "communication_rating")
+    private Integer communicationRating;
+
+    @Column(name = "culture_fit_rating")
+    private Integer cultureFitRating;
+
+    @Column(name = "overall_rating", nullable = false)
+    private Integer overallRating;
+
+    @Column(columnDefinition = "TEXT")
+    private String comments;
+
+    @Column(nullable = false)
+    private String recommendation;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/Document.java
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "document")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Document {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "candidate_id", nullable = false)
+    private Candidate candidate;
+
+    @Column(name = "document_name", nullable = false)
+    private String documentName;
+
+    @Column(name = "document_type", nullable = false)
+    private String documentType;
+
+    @Column(name = "file_path", nullable = false)
+    private String filePath;
+
+    @Column(name = "upload_date")
+    private LocalDateTime uploadDate;
+
+    @ManyToOne
+    @JoinColumn(name = "uploaded_by")
+    private User uploadedBy;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/EmailTemplate.java
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "email_template")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class EmailTemplate {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @Column(nullable = false)
+    private String subject;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String body;
+
+    @Column(name = "template_type", nullable = false)
+    private String templateType;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private User createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/entity/TalentPool.java
+
+package com.hrpipeline.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "talent_pool")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TalentPool {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
+
+    @ManyToMany
+    @JoinTable(
+        name = "talent_pool_candidates",
+        joinColumns = @JoinColumn(name = "talent_pool_id"),
+        inverseJoinColumns = @JoinColumn(name = "candidate_id")
+    )
+    private Set<Candidate> candidates = new HashSet<>();
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/UserDTO.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+import java.util.Set;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserDTO {
+
+    private Long id;
+
+    @NotBlank(message = "Please provide a valid username")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    private String username;
+
+    @NotBlank(message = "Please provide a valid email")
+    @Email(message = "Email should be valid")
+    private String email;
+
+    @NotBlank(message = "Please provide a valid first name")
+    @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
+    private String firstName;
+
+    @NotBlank(message = "Please provide a valid last name")
+    @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
+    private String lastName;
+
+    private boolean active;
+
+    private Set<String> roles;
+
+    // For creating a new user - password field
+    @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
+    private String password;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/JobPostingDTO.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class JobPostingDTO {
+
+    private Long id;
+
+    @NotBlank(message = "Please provide a valid title")
+    @Size(max = 100, message = "Title must not exceed 100 characters")
+    private String title;
+
+    @NotBlank(message = "Please provide a valid description")
+    private String description;
+
+    private String requirements;
+
+    private String responsibilities;
+
+    @Size(max = 100, message = "Location must not exceed 100 characters")
+    private String location;
+
+    @Size(max = 50, message = "Department must not exceed 50 characters")
+    private String department;
+
+    @Size(max = 50, message = "Employment type must not exceed 50 characters")
+    private String employmentType;
+
+    private boolean active;
+
+    private LocalDateTime postingDate;
+
+    private LocalDateTime closingDate;
+
+    private Long createdById;
+    
+    private String createdByName;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/CandidateDTO.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CandidateDTO {
+
+    private Long id;
+
+    @NotBlank(message = "Please provide a valid first name")
+    @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
+    private String firstName;
+
+    @NotBlank(message = "Please provide a valid last name")
+    @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
+    private String lastName;
+
+    @NotBlank(message = "Please provide a valid email")
+    @Email(message = "Email should be valid")
+    private String email;
+
+    @Size(max = 20, message = "Phone must not exceed 20 characters")
+    private String phone;
+
+    private String address;
+
+    private String resumeUrl;
+
+    private String linkedinUrl;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/ApplicationDTO.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ApplicationDTO {
+
+    private Long id;
+
+    @NotNull(message = "Please provide a valid job ID")
+    private Long jobId;
+    
+    private String jobTitle;
+
+    @NotNull(message = "Please provide a valid candidate ID")
+    private Long candidateId;
+    
+    private String candidateName;
+    
+    private String candidateEmail;
+
+    private String status;
+
+    private String coverLetter;
+
+    private LocalDateTime applicationDate;
+
+    private LocalDateTime lastStatusUpdate;
+
+    private String notes;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+}
+
+
+InterviewDTO
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
+import java.time.LocalDateTime;
+import java.util.Set;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class InterviewDTO {
+
+    private Long id;
+
+    @NotNull(message = "Please provide a valid application ID")
+    private Long applicationId;
+    
+    private String candidateName;
+    
+    private String jobTitle;
+
+    @NotBlank(message = "Please provide a valid interview type")
+    private String interviewType;
+
+    @NotNull(message = "Please provide a valid scheduled date")
+    private LocalDateTime scheduledDate;
+
+    @NotNull(message = "Please provide a valid duration")
+    @Positive(message = "Duration must be positive")
+    private Integer duration;
+
+    private String location;
+
+    private String meetingLink;
+
+    private String status;
+
+    private String notes;
+
+    @NotNull(message = "Please provide a valid created by ID")
+    private Long createdById;
+    
+    private String createdByName;
+
+    private Set<Long> participantIds;
+    
+    private Set<String> participantNames;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/FeedbackDTO.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class FeedbackDTO {
+
+    private Long id;
+
+    @NotNull(message = "Please provide a valid interview ID")
+    private Long interviewId;
+    
+    private String candidateName;
+    
+    private String jobTitle;
+
+    @NotNull(message = "Please provide a valid user ID")
+    private Long userId;
+    
+    private String userName;
+
+    @Min(value = 1, message = "Rating must be between 1 and 5")
+    @Max(value = 5, message = "Rating must be between 1 and 5")
+    private Integer technicalRating;
+
+    @Min(value = 1, message = "Rating must be between 1 and 5")
+    @Max(value = 5, message = "Rating must be between 1 and 5")
+    private Integer communicationRating;
+
+    @Min(value = 1, message = "Rating must be between 1 and 5")
+    @Max(value = 5, message = "Rating must be between 1 and 5")
+    private Integer cultureFitRating;
+
+    @NotNull(message = "Please provide a valid overall rating")
+    @Min(value = 1, message = "Rating must be between 1 and 5")
+    @Max(value = 5, message = "Rating must be between 1 and 5")
+    private Integer overallRating;
+
+    private String comments;
+
+    @NotBlank(message = "Please provide a valid recommendation")
+    private String recommendation;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/DocumentDTO.java
+
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DocumentDTO {
+
+    private Long id;
+
+    @NotNull(message = "Please provide a valid candidate ID")
+    private Long candidateId;
+    
+    private String candidateName;
+
+    @NotBlank(message = "Please provide a valid document name")
+    private String documentName;
+
+    @NotBlank(message = "Please provide a valid document type")
+    private String documentType;
+
+    private String filePath;
+
+    private LocalDateTime uploadDate;
+
+    private Long uploadedById;
+    
+    private String uploadedByName;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/EmailTemplateDTO.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class EmailTemplateDTO {
+
+    private Long id;
+
+    @NotBlank(message = "Please provide a valid name")
+    private String name;
+
+    @NotBlank(message = "Please provide a valid subject")
+    private String subject;
+
+    @NotBlank(message = "Please provide a valid body")
+    private String body;
+
+    @NotBlank(message = "Please provide a valid template type")
+    private String templateType;
+
+    private Long createdById;
+    
+    private String createdByName;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/TalentPoolDTO.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
+import java.util.Set;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TalentPoolDTO {
+
+    private Long id;
+
+    @NotBlank(message = "Please provide a valid name")
+    private String name;
+
+    private String description;
+
+    @NotNull(message = "Please provide a valid created by ID")
+    private Long createdById;
+    
+    private String createdByName;
+
+    private Set<Long> candidateIds;
+    
+    private Set<CandidateDTO> candidates;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/LoginRequest.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class LoginRequest {
+
+    @NotBlank(message = "Please provide a valid username or email")
+    private String usernameOrEmail;
+
+    @NotBlank(message = "Please provide a valid password")
+    private String password;
+}
+
+
+Created src/main/java/com/hrpipeline/dto/LoginResponse.java
+
+package com.hrpipeline.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Set;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class LoginResponse {
+
+    private String accessToken;
+    private String tokenType = "Bearer";
+    private Long id;
+    private String username;
+    private String email;
+    private String firstName;
+    private String lastName;
+    private Set<String> roles;
+
+    public LoginResponse(String accessToken, Long id, String username, String email, String firstName, String lastName, Set<String> roles) {
+        this.accessToken = accessToken;
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.roles = roles;
+    }
+}
+
+
+
+Created src/main/java/com/hrpipeline/repository/UserRepository.java
+
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+
+    Optional<User> findByEmail(String email);
+
+    Boolean existsByUsername(String username);
+
+    Boolean existsByEmail(String email);
+
+    Optional<User> findByUsernameOrEmail(String username, String email);
+}
+
+
+Created src/main/java/com/hrpipeline/repository/RoleRepository.java
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.Role;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface RoleRepository extends JpaRepository<Role, Long> {
+
+    Optional<Role> findByName(String name);
+}
+
+
+Created src/main/java/com/hrpipeline/repository/JobPostingRepository.java
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.JobPosting;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Repository
+public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
+
+    List<JobPosting> findByActive(boolean active);
+
+    List<JobPosting> findByDepartment(String department);
+
+    List<JobPosting> findByLocation(String location);
+
+    List<JobPosting> findByCreatedBy_Id(Long userId);
+
+    @Query("SELECT j FROM JobPosting j WHERE j.active = true AND j.closingDate > :now")
+    List<JobPosting> findActiveJobs(LocalDateTime now);
+
+    @Query("SELECT j FROM JobPosting j WHERE j.title LIKE %:keyword% OR j.description LIKE %:keyword% OR j.department LIKE %:keyword%")
+    List<JobPosting> searchJobs(String keyword);
+}
+
+
+Created src/main/java/com/hrpipeline/repository/CandidateRepository.java
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.Candidate;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface CandidateRepository extends JpaRepository<Candidate, Long> {
+
+    Optional<Candidate> findByEmail(String email);
+
+    List<Candidate> findByFirstNameContainingOrLastNameContaining(String firstName, String lastName);
+
+    @Query("SELECT c FROM Candidate c WHERE CONCAT(c.firstName, ' ', c.lastName) LIKE %:name%")
+    List<Candidate> findByFullNameContaining(String name);
+}
+
+
+
+Created src/main/java/com/hrpipeline/repository/ApplicationRepository.java
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.Application;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ApplicationRepository extends JpaRepository<Application, Long> {
+
+    List<Application> findByCandidate_Id(Long candidateId);
+
+    List<Application> findByJob_Id(Long jobId);
+
+    List<Application> findByStatus(String status);
+
+    @Query("SELECT a FROM Application a WHERE a.job.id = :jobId AND a.status = :status")
+    List<Application> findByJobIdAndStatus(Long jobId, String status);
+
+    @Query("SELECT a FROM Application a WHERE a.candidate.id = :candidateId AND a.job.id = :jobId")
+    List<Application> findByCandidateIdAndJobId(Long candidateId, Long jobId);
+    
+    @Query("SELECT COUNT(a) FROM Application a WHERE a.job.id = :jobId GROUP BY a.status")
+    List<Object[]> countByJobIdGroupByStatus(Long jobId);
+}
+
+
+Created src/main/java/com/hrpipeline/repository/InterviewRepository.java
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.Interview;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Repository
+public interface InterviewRepository extends JpaRepository<Interview, Long> {
+
+    List<Interview> findByApplication_Id(Long applicationId);
+
+    List<Interview> findByScheduledDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    List<Interview> findByStatus(String status);
+
+    @Query("SELECT i FROM Interview i JOIN i.participants p WHERE p.id = :userId")
+    List<Interview> findByParticipantId(Long userId);
+
+    @Query("SELECT i FROM Interview i WHERE i.application.candidate.id = :candidateId")
+    List<Interview> findByCandidateId(Long candidateId);
+
+    @Query("SELECT i FROM Interview i WHERE i.createdBy.id = :userId")
+    List<Interview> findByCreatedById(Long userId);
+}
+
+
+Created src/main/java/com/hrpipeline/repository/FeedbackRepository.java
+
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.Feedback;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
+
+    List<Feedback> findByInterview_Id(Long interviewId);
+
+    List<Feedback> findByUser_Id(Long userId);
+
+    @Query("SELECT f FROM Feedback f WHERE f.interview.application.id = :applicationId")
+    List<Feedback> findByApplicationId(Long applicationId);
+
+    @Query("SELECT f FROM Feedback f WHERE f.interview.application.candidate.id = :candidateId")
+    List<Feedback> findByCandidateId(Long candidateId);
+
+    @Query("SELECT AVG(f.overallRating) FROM Feedback f WHERE f.interview.application.id = :applicationId")
+    Double getAverageRatingByApplicationId(Long applicationId);
+}
+
+
+Created src/main/java/com/hrpipeline/repository/DocumentRepository.java
+
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.Document;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface DocumentRepository extends JpaRepository<Document, Long> {
+
+    List<Document> findByCandidate_Id(Long candidateId);
+
+    List<Document> findByDocumentType(String documentType);
+
+    List<Document> findByUploadedBy_Id(Long userId);
+}
+
+
+ted src/main/java/com/hrpipeline/repository/EmailTemplateRepository.java
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.EmailTemplate;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, Long> {
+
+    Optional<EmailTemplate> findByName(String name);
+
+    List<EmailTemplate> findByTemplateType(String templateType);
+
+    List<EmailTemplate> findByCreatedBy_Id(Long userId);
+}
+
+
+Created src/main/java/com/hrpipeline/repository/TalentPoolRepository.java
+
+
+package com.hrpipeline.repository;
+
+import com.hrpipeline.entity.TalentPool;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface TalentPoolRepository extends JpaRepository<TalentPool, Long> {
+
+    List<TalentPool> findByCreatedBy_Id(Long userId);
+
+    @Query("SELECT tp FROM TalentPool tp JOIN tp.candidates c WHERE c.id = :candidateId")
+    List<TalentPool> findByCandidate_Id(Long candidateId);
+}
+
+
+Created src/main/java/com/hrpipeline/service/UserService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.UserDTO;
+
+import java.util.List;
+
+public interface UserService {
+
+    List<UserDTO> getAllUsers();
+
+    UserDTO getUserById(Long id);
+
+    UserDTO getUserByUsername(String username);
+
+    UserDTO getUserByEmail(String email);
+
+    UserDTO createUser(UserDTO userDTO);
+
+    UserDTO updateUser(Long id, UserDTO userDTO);
+
+    void deleteUser(Long id);
+
+    boolean existsByUsername(String username);
+
+    boolean existsByEmail(String email);
+
+    List<UserDTO> getUsersByRole(String roleName);
+}
+
+
+Created src/main/java/com/hrpipeline/service/JobPostingService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.JobPostingDTO;
+
+import java.util.List;
+
+public interface JobPostingService {
+
+    List<JobPostingDTO> getAllJobPostings();
+
+    JobPostingDTO getJobPostingById(Long id);
+
+    JobPostingDTO createJobPosting(JobPostingDTO jobPostingDTO);
+
+    JobPostingDTO updateJobPosting(Long id, JobPostingDTO jobPostingDTO);
+
+    void deleteJobPosting(Long id);
+
+    List<JobPostingDTO> getActiveJobPostings();
+
+    List<JobPostingDTO> getJobPostingsByDepartment(String department);
+
+    List<JobPostingDTO> getJobPostingsByLocation(String location);
+
+    List<JobPostingDTO> searchJobPostings(String keyword);
+
+    void activateJobPosting(Long id);
+
+    void deactivateJobPosting(Long id);
+}
+
+
+Created src/main/java/com/hrpipeline/service/CandidateService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.CandidateDTO;
+
+import java.util.List;
+
+public interface CandidateService {
+
+    List<CandidateDTO> getAllCandidates();
+
+    CandidateDTO getCandidateById(Long id);
+
+    CandidateDTO getCandidateByEmail(String email);
+
+    CandidateDTO createCandidate(CandidateDTO candidateDTO);
+
+    CandidateDTO updateCandidate(Long id, CandidateDTO candidateDTO);
+
+    void deleteCandidate(Long id);
+
+    List<CandidateDTO> searchCandidates(String keyword);
+}
+
+
+Created src/main/java/com/hrpipeline/service/ApplicationService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.ApplicationDTO;
+
+import java.util.List;
+import java.util.Map;
+
+public interface ApplicationService {
+
+    List<ApplicationDTO> getAllApplications();
+
+    ApplicationDTO getApplicationById(Long id);
+
+    ApplicationDTO createApplication(ApplicationDTO applicationDTO);
+
+    ApplicationDTO updateApplication(Long id, ApplicationDTO applicationDTO);
+
+    void deleteApplication(Long id);
+
+    List<ApplicationDTO> getApplicationsByCandidate(Long candidateId);
+
+    List<ApplicationDTO> getApplicationsByJob(Long jobId);
+
+    List<ApplicationDTO> getApplicationsByStatus(String status);
+
+    List<ApplicationDTO> getApplicationsByJobAndStatus(Long jobId, String status);
+
+    void updateApplicationStatus(Long id, String status);
+
+    Map<String, Long> getApplicationStatsByJob(Long jobId);
+}
+
+
+Created src/main/java/com/hrpipeline/service/InterviewService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.InterviewDTO;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public interface InterviewService {
+
+    List<InterviewDTO> getAllInterviews();
+
+    InterviewDTO getInterviewById(Long id);
+
+    InterviewDTO createInterview(InterviewDTO interviewDTO);
+
+    InterviewDTO updateInterview(Long id, InterviewDTO interviewDTO);
+
+    void deleteInterview(Long id);
+
+    List<InterviewDTO> getInterviewsByApplication(Long applicationId);
+
+    List<InterviewDTO> getInterviewsByDateRange(LocalDateTime startDate, LocalDateTime endDate);
+
+    List<InterviewDTO> getInterviewsByStatus(String status);
+
+    List<InterviewDTO> getInterviewsByParticipant(Long userId);
+
+    List<InterviewDTO> getInterviewsByCandidate(Long candidateId);
+
+    void scheduleInterview(InterviewDTO interviewDTO);
+
+    void rescheduleInterview(Long id, LocalDateTime newDate, Integer newDuration);
+
+    void updateInterviewStatus(Long id, String status);
+}
+
+
+Created src/main/java/com/hrpipeline/service/FeedbackService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.FeedbackDTO;
+
+import java.util.List;
+
+public interface FeedbackService {
+
+    List<FeedbackDTO> getAllFeedback();
+
+    FeedbackDTO getFeedbackById(Long id);
+
+    FeedbackDTO createFeedback(FeedbackDTO feedbackDTO);
+
+    FeedbackDTO updateFeedback(Long id, FeedbackDTO feedbackDTO);
+
+    void deleteFeedback(Long id);
+
+    List<FeedbackDTO> getFeedbackByInterview(Long interviewId);
+
+    List<FeedbackDTO> getFeedbackByUser(Long userId);
+
+    List<FeedbackDTO> getFeedbackByApplication(Long applicationId);
+
+    List<FeedbackDTO> getFeedbackByCandidate(Long candidateId);
+
+    Double getAverageRatingByApplication(Long applicationId);
+}
+
+
+
+Created src/main/java/com/hrpipeline/service/DocumentService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.DocumentDTO;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+public interface DocumentService {
+
+    List<DocumentDTO> getAllDocuments();
+
+    DocumentDTO getDocumentById(Long id);
+
+    DocumentDTO createDocument(DocumentDTO documentDTO, MultipartFile file);
+
+    DocumentDTO updateDocument(Long id, DocumentDTO documentDTO);
+
+    void deleteDocument(Long id);
+
+    List<DocumentDTO> getDocumentsByCandidate(Long candidateId);
+
+    List<DocumentDTO> getDocumentsByType(String documentType);
+
+    List<DocumentDTO> getDocumentsByUploader(Long userId);
+
+    byte[] getDocumentContent(Long id);
+}
+
+
+Created src/main/java/com/hrpipeline/service/EmailService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.EmailTemplateDTO;
+
+import java.util.List;
+import java.util.Map;
+
+public interface EmailService {
+
+    void sendEmail(String to, String subject, String body);
+
+    void sendEmailWithTemplate(String to, String templateName, Map<String, String> parameters);
+
+    List<EmailTemplateDTO> getAllEmailTemplates();
+
+    EmailTemplateDTO getEmailTemplateById(Long id);
+
+    EmailTemplateDTO getEmailTemplateByName(String name);
+
+    EmailTemplateDTO createEmailTemplate(EmailTemplateDTO emailTemplateDTO);
+
+    EmailTemplateDTO updateEmailTemplate(Long id, EmailTemplateDTO emailTemplateDTO);
+
+    void deleteEmailTemplate(Long id);
+
+    List<EmailTemplateDTO> getEmailTemplatesByType(String templateType);
+
+    String processEmailTemplate(String templateContent, Map<String, String> parameters);
+}
+
+
+Created src/main/java/com/hrpipeline/service/TalentPoolService.java
+
+package com.hrpipeline.service;
+
+import com.hrpipeline.dto.TalentPoolDTO;
+
+import java.util.List;
+
+public interface TalentPoolService {
+
+    List<TalentPoolDTO> getAllTalentPools();
+
+    TalentPoolDTO getTalentPoolById(Long id);
+
+    TalentPoolDTO createTalentPool(TalentPoolDTO talentPoolDTO);
+
+    TalentPoolDTO updateTalentPool(Long id, TalentPoolDTO talentPoolDTO);
+
+    void deleteTalentPool(Long id);
+
+    List<TalentPoolDTO> getTalentPoolsByCreator(Long userId);
+
+    List<TalentPoolDTO> getTalentPoolsByCandidate(Long candidateId);
+
+    void addCandidateToTalentPool(Long talentPoolId, Long candidateId, Long addedById);
+
+    void removeCandidateFromTalentPool(Long talentPoolId, Long candidateId);
+}
+
+
+Created src/main/java/com/hrpipeline/service/impl/UserServiceImpl.java
+
+package com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.UserDTO;
+import com.hrpipeline.entity.Role;
+import com.hrpipeline.entity.User;
+import com.hrpipeline.exception.BadRequestException;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.RoleRepository;
+import com.hrpipeline.repository.UserRepository;
+import com.hrpipeline.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public List<UserDTO> getAllUsers() {
+        log.info("Getting all users");
+        return userRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public UserDTO getUserById(Long id) {
+        log.info("Getting user by ID: {}", id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        return convertToDTO(user);
+    }
+
+    @Override
+    public UserDTO getUserByUsername(String username) {
+        log.info("Getting user by username: {}", username);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+        return convertToDTO(user);
+    }
+
+    @Override
+    public UserDTO getUserByEmail(String email) {
+        log.info("Getting user by email: {}", email);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        return convertToDTO(user);
+    }
+
+    @Override
+    @Transactional
+    public UserDTO createUser(UserDTO userDTO) {
+        log.info("Creating new user with username: {}", userDTO.getUsername());
+        
+        if (userRepository.existsByUsername(userDTO.getUsername())) {
+            throw new BadRequestException("Username is already taken");
+        }
+
+        if (userRepository.existsByEmail(userDTO.getEmail())) {
+            throw new BadRequestException("Email is already in use");
+        }
+
+        User user = convertToEntity(userDTO);
+        
+        // Encode password
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        
+        // Set roles
+        Set<Role> roles = new HashSet<>();
+        if (userDTO.getRoles() != null && !userDTO.getRoles().isEmpty()) {
+            userDTO.getRoles().forEach(roleName -> {
+                Role role = roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new ResourceNotFoundException("Role not found with name: " + roleName));
+                roles.add(role);
+            });
+        } else {
+            // Default role - RECRUITER
+            Role defaultRole = roleRepository.findByName("ROLE_RECRUITER")
+                    .orElseThrow(() -> new ResourceNotFoundException("Default role not found"));
+            roles.add(defaultRole);
+        }
+        
+        user.setRoles(roles);
+        
+        User savedUser = userRepository.save(user);
+        return convertToDTO(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public UserDTO updateUser(Long id, UserDTO userDTO) {
+        log.info("Updating user with ID: {}", id);
+        
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        
+        // Check if username is being changed and if it's already taken
+        if (!existingUser.getUsername().equals(userDTO.getUsername()) &&
+                userRepository.existsByUsername(userDTO.getUsername())) {
+            throw new BadRequestException("Username is already taken");
+        }
+        
+        // Check if email is being changed and if it's already in use
+        if (!existingUser.getEmail().equals(userDTO.getEmail()) &&
+                userRepository.existsByEmail(userDTO.getEmail())) {
+            throw new BadRequestException("Email is already in use");
+        }
+        
+        // Update fields
+        existingUser.setUsername(userDTO.getUsername());
+        existingUser.setEmail(userDTO.getEmail());
+        existingUser.setFirstName(userDTO.getFirstName());
+        existingUser.setLastName(userDTO.getLastName());
+        existingUser.setActive(userDTO.isActive());
+        
+        // Update password if provided
+        if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        }
+        
+        // Update roles if provided
+        if (userDTO.getRoles() != null && !userDTO.getRoles().isEmpty()) {
+            Set<Role> roles = new HashSet<>();
+            userDTO.getRoles().forEach(roleName -> {
+                Role role = roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new ResourceNotFoundException("Role not found with name: " + roleName));
+                roles.add(role);
+            });
+            existingUser.setRoles(roles);
+        }
+        
+        User updatedUser = userRepository.save(existingUser);
+        return convertToDTO(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long id) {
+        log.info("Deleting user with ID: {}", id);
+        
+        if (!userRepository.existsById(id)) {
+            throw new ResourceNotFoundException("User not found with id: " + id);
+        }
+        
+        userRepository.deleteById(id);
+    }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    @Override
+    public List<UserDTO> getUsersByRole(String roleName) {
+        log.info("Getting users by role: {}", roleName);
+        
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found with name: " + roleName));
+        
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRoles().contains(role))
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // Helper methods
+    private UserDTO convertToDTO(User user) {
+        UserDTO userDTO = modelMapper.map(user, UserDTO.class);
+        
+        // Set roles
+        Set<String> roleNames = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+        userDTO.setRoles(roleNames);
+        
+        return userDTO;
+    }
+
+    private User convertToEntity(UserDTO userDTO) {
+        return modelMapper.map(userDTO, User.class);
+    }
+}
+
+
+Created src/main/java/com/hrpipeline/service/impl/JobPostingServiceImpl.java
+
+package com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.JobPostingDTO;
+import com.hrpipeline.entity.JobPosting;
+import com.hrpipeline.entity.User;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.JobPostingRepository;
+import com.hrpipeline.repository.UserRepository;
+import com.hrpipeline.service.JobPostingService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class JobPostingServiceImpl implements JobPostingService {
+
+    private final JobPostingRepository jobPostingRepository;
+    private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
+
+    @Override
+    public List<JobPostingDTO> getAllJobPostings() {
+        log.info("Getting all job postings");
+        return jobPostingRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public JobPostingDTO getJobPostingById(Long id) {
+        log.info("Getting job posting by ID: {}", id);
+        JobPosting jobPosting = jobPostingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job posting not found with id: " + id));
+        return convertToDTO(jobPosting);
+    }
+
+    @Override
+    @Transactional
+    public JobPostingDTO createJobPosting(JobPostingDTO jobPostingDTO) {
+        log.info("Creating new job posting: {}", jobPostingDTO.getTitle());
+        
+        JobPosting jobPosting = convertToEntity(jobPostingDTO);
+        
+        // Set posting date if not provided
+        if (jobPosting.getPostingDate() == null) {
+            jobPosting.setPostingDate(LocalDateTime.now());
+        }
+        
+        // Set creator if provided
+        if (jobPostingDTO.getCreatedById() != null) {
+            User creator = userRepository.findById(jobPostingDTO.getCreatedById())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + jobPostingDTO.getCreatedById()));
+            jobPosting.setCreatedBy(creator);
+        }
+        
+        JobPosting savedJobPosting = jobPostingRepository.save(jobPosting);
+        return convertToDTO(savedJobPosting);
+    }
+
+    @Override
+    @Transactional
+    public JobPostingDTO updateJobPosting(Long id, JobPostingDTO jobPostingDTO) {
+        log.info("Updating job posting with ID: {}", id);
+        
+        JobPosting existingJobPosting = jobPostingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job posting not found with id: " + id));
+        
+        // Update fields
+        existingJobPosting.setTitle(jobPostingDTO.getTitle());
+        existingJobPosting.setDescription(jobPostingDTO.getDescription());
+        existingJobPosting.setRequirements(jobPostingDTO.getRequirements());
+        existingJobPosting.setResponsibilities(jobPostingDTO.getResponsibilities());
+        existingJobPosting.setLocation(jobPostingDTO.getLocation());
+        existingJobPosting.setDepartment(jobPostingDTO.getDepartment());
+        existingJobPosting.setEmploymentType(jobPostingDTO.getEmploymentType());
+        existingJobPosting.setActive(jobPostingDTO.isActive());
+        
+        // Update closing date if provided
+        if (jobPostingDTO.getClosingDate() != null) {
+            existingJobPosting.setClosingDate(jobPostingDTO.getClosingDate());
+        }
+        
+        JobPosting updatedJobPosting = jobPostingRepository.save(existingJobPosting);
+        return convertToDTO(updatedJobPosting);
+    }
+
+    @Override
+    @Transactional
+    public void deleteJobPosting(Long id) {
+        log.info("Deleting job posting with ID: {}", id);
+        
+        if (!jobPostingRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Job posting not found with id: " + id);
+        }
+        
+        jobPostingRepository.deleteById(id);
+    }
+
+    @Override
+    public List<JobPostingDTO> getActiveJobPostings() {
+        log.info("Getting active job postings");
+        return jobPostingRepository.findActiveJobs(LocalDateTime.now()).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<JobPostingDTO> getJobPostingsByDepartment(String department) {
+        log.info("Getting job postings by department: {}", department);
+        return jobPostingRepository.findByDepartment(department).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<JobPostingDTO> getJobPostingsByLocation(String location) {
+        log.info("Getting job postings by location: {}", location);
+        return jobPostingRepository.findByLocation(location).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<JobPostingDTO> searchJobPostings(String keyword) {
+        log.info("Searching job postings with keyword: {}", keyword);
+        return jobPostingRepository.searchJobs(keyword).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void activateJobPosting(Long id) {
+        log.info("Activating job posting with ID: {}", id);
+        
+        JobPosting jobPosting = jobPostingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job posting not found with id: " + id));
+        
+        jobPosting.setActive(true);
+        jobPostingRepository.save(jobPosting);
+    }
+
+    @Override
+    @Transactional
+    public void deactivateJobPosting(Long id) {
+        log.info("Deactivating job posting with ID: {}", id);
+        
+        JobPosting jobPosting = jobPostingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job posting not found with id: " + id));
+        
+        jobPosting.setActive(false);
+        jobPostingRepository.save(jobPosting);
+    }
+
+    // Helper methods
+    private JobPostingDTO convertToDTO(JobPosting jobPosting) {
+        JobPostingDTO jobPostingDTO = modelMapper.map(jobPosting, JobPostingDTO.class);
+        
+        // Set created by ID and name
+        if (jobPosting.getCreatedBy() != null) {
+            jobPostingDTO.setCreatedById(jobPosting.getCreatedBy().getId());
+            jobPostingDTO.setCreatedByName(jobPosting.getCreatedBy().getFirstName() + " " + jobPosting.getCreatedBy().getLastName());
+        }
+        
+        return jobPostingDTO;
+    }
+
+    private JobPosting convertToEntity(JobPostingDTO jobPostingDTO) {
+        return modelMapper.map(jobPostingDTO, JobPosting.class);
+    }
+}
+
+
+Created src/main/java/com/hrpipeline/service/impl/CandidateServiceImpl.java
+
+package com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.CandidateDTO;
+import com.hrpipeline.entity.Candidate;
+import com.hrpipeline.exception.BadRequestException;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.CandidateRepository;
+import com.hrpipeline.service.CandidateService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class CandidateServiceImpl implements CandidateService {
+
+    private final CandidateRepository candidateRepository;
+    private final ModelMapper modelMapper;
+
+    @Override
+    public List<CandidateDTO> getAllCandidates() {
+        log.info("Getting all candidates");
+        return candidateRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public CandidateDTO getCandidateById(Long id) {
+        log.info("Getting candidate by ID: {}", id);
+        Candidate candidate = candidateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found with id: " + id));
+        return convertToDTO(candidate);
+    }
+
+    @Override
+    public CandidateDTO getCandidateByEmail(String email) {
+        log.info("Getting candidate by email: {}", email);
+        Candidate candidate = candidateRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found with email: " + email));
+        return convertToDTO(candidate);
+    }
+
+    @Override
+    @Transactional
+    public CandidateDTO createCandidate(CandidateDTO candidateDTO) {
+        log.info("Creating new candidate: {} {}", candidateDTO.getFirstName(), candidateDTO.getLastName());
+        
+        // Check if email is already in use
+        if (candidateRepository.findByEmail(candidateDTO.getEmail()).isPresent()) {
+            throw new BadRequestException("Email is already in use");
+        }
+        
+        Candidate candidate = convertToEntity(candidateDTO);
+        Candidate savedCandidate = candidateRepository.save(candidate);
+        return convertToDTO(savedCandidate);
+    }
+
+    @Override
+    @Transactional
+    public CandidateDTO updateCandidate(Long id, CandidateDTO candidateDTO) {
+        log.info("Updating candidate with ID: {}", id);
+        
+        Candidate existingCandidate = candidateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found with id: " + id));
+        
+        // Check if email is being changed and if it's already in use
+        if (!existingCandidate.getEmail().equals(candidateDTO.getEmail()) &&
+                candidateRepository.findByEmail(candidateDTO.getEmail()).isPresent()) {
+            throw new BadRequestException("Email is already in use");
+        }
+        
+        // Update fields
+        existingCandidate.setFirstName(candidateDTO.getFirstName());
+        existingCandidate.setLastName(candidateDTO.getLastName());
+        existingCandidate.setEmail(candidateDTO.getEmail());
+        existingCandidate.setPhone(candidateDTO.getPhone());
+        existingCandidate.setAddress(candidateDTO.getAddress());
+        
+        // Update resume URL if provided
+        if (candidateDTO.getResumeUrl() != null) {
+            existingCandidate.setResumeUrl(candidateDTO.getResumeUrl());
+        }
+        
+        // Update LinkedIn URL if provided
+        if (candidateDTO.getLinkedinUrl() != null) {
+            existingCandidate.setLinkedinUrl(candidateDTO.getLinkedinUrl());
+        }
+        
+        Candidate updatedCandidate = candidateRepository.save(existingCandidate);
+        return convertToDTO(updatedCandidate);
+    }
+
+    @Override
+    @Transactional
+    public void deleteCandidate(Long id) {
+        log.info("Deleting candidate with ID: {}", id);
+        
+        if (!candidateRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Candidate not found with id: " + id);
+        }
+        
+        candidateRepository.deleteById(id);
+    }
+
+    @Override
+    public List<CandidateDTO> searchCandidates(String keyword) {
+        log.info("Searching candidates with keyword: {}", keyword);
+        return candidateRepository.findByFullNameContaining(keyword).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // Helper methods
+    private CandidateDTO convertToDTO(Candidate candidate) {
+        return modelMapper.map(candidate, CandidateDTO.class);
+    }
+
+    private Candidate convertToEntity(CandidateDTO candidateDTO) {
+        return modelMapper.map(candidateDTO, Candidate.class);
+    }
+}
+
+
+
+Created src/main/java/com/hrpipeline/service/impl/ApplicationServiceImpl.java
+
+package com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.ApplicationDTO;
+import com.hrpipeline.entity.Application;
+import com.hrpipeline.entity.Candidate;
+import com.hrpipeline.entity.JobPosting;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.ApplicationRepository;
+import com.hrpipeline.repository.CandidateRepository;
+import com.hrpipeline.repository.JobPostingRepository;
+import com.hrpipeline.service.ApplicationService;
+import com.hrpipeline.service.EmailService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ApplicationServiceImpl implements ApplicationService {
+
+    private final ApplicationRepository applicationRepository;
+    private final CandidateRepository candidateRepository;
+    private final JobPostingRepository jobPostingRepository;
+    private final EmailService emailService;
+    private final ModelMapper modelMapper;
+
+    @Override
+    public List<ApplicationDTO> getAllApplications() {
+        log.info("Getting all applications");
+        return applicationRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ApplicationDTO getApplicationById(Long id) {
+        log.info("Getting application by ID: {}", id);
+        Application application = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + id));
+        return convertToDTO(application);
+    }
+
+    @Override
+    @Transactional
+    public ApplicationDTO createApplication(ApplicationDTO applicationDTO) {
+        log.info("Creating new application for job ID: {} and candidate ID: {}", 
+                applicationDTO.getJobId(), applicationDTO.getCandidateId());
+        
+        // Get job and candidate
+        JobPosting job = jobPostingRepository.findById(applicationDTO.getJobId())
+                .orElseThrow(() -> new ResourceNotFoundException("Job posting not found with id: " + applicationDTO.getJobId()));
+        
+        Candidate candidate = candidateRepository.findById(applicationDTO.getCandidateId())
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found with id: " + applicationDTO.getCandidateId()));
+        
+        // Create application
+        Application application = new Application();
+        application.setJob(job);
+        application.setCandidate(candidate);
+        application.setCoverLetter(applicationDTO.getCoverLetter());
+        
+        // Set status and dates
+        application.setStatus("APPLIED");
+        application.setApplicationDate(LocalDateTime.now());
+        application.setLastStatusUpdate(LocalDateTime.now());
+        
+        Application savedApplication = applicationRepository.save(application);
+        
+        // Send confirmation email
+        try {
+            Map<String, String> emailParams = new HashMap<>();
+            emailParams.put("candidate_name", candidate.getFirstName() + " " + candidate.getLastName());
+            emailParams.put("job_title", job.getTitle());
+            emailParams.put("application_id", savedApplication.getId().toString());
+            
+            emailService.sendEmailWithTemplate(candidate.getEmail(), "APPLICATION_CONFIRMATION", emailParams);
+        } catch (Exception e) {
+            log.error("Failed to send application confirmation email", e);
+        }
+        
+        return convertToDTO(savedApplication);
+    }
+
+    @Override
+    @Transactional
+    public ApplicationDTO updateApplication(Long id, ApplicationDTO applicationDTO) {
+        log.info("Updating application with ID: {}", id);
+        
+        Application existingApplication = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + id));
+        
+        // Update fields
+        if (applicationDTO.getStatus() != null) {
+            existingApplication.setStatus(applicationDTO.getStatus());
+            existingApplication.setLastStatusUpdate(LocalDateTime.now());
+        }
+        
+        if (applicationDTO.getNotes() != null) {
+            existingApplication.setNotes(applicationDTO.getNotes());
+        }
+        
+        Application updatedApplication = applicationRepository.save(existingApplication);
+        return convertToDTO(updatedApplication);
+    }
+
+    @Override
+    @Transactional
+    public void deleteApplication(Long id) {
+        log.info("Deleting application with ID: {}", id);
+        
+        if (!applicationRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Application not found with id: " + id);
+        }
+        
+        applicationRepository.deleteById(id);
+    }
+
+    @Override
+    public List<ApplicationDTO> getApplicationsByCandidate(Long candidateId) {
+        log.info("Getting applications by candidate ID: {}", candidateId);
+        
+        // Check if candidate exists
+        if (!candidateRepository.existsById(candidateId)) {
+            throw new ResourceNotFoundException("Candidate not found with id: " + candidateId);
+        }
+        
+        return applicationRepository.findByCandidate_Id(candidateId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ApplicationDTO> getApplicationsByJob(Long jobId) {
+        log.info("Getting applications by job ID: {}", jobId);
+        
+        // Check if job exists
+        if (!jobPostingRepository.existsById(jobId)) {
+            throw new ResourceNotFoundException("Job posting not found with id: " + jobId);
+        }
+        
+        return applicationRepository.findByJob_Id(jobId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ApplicationDTO> getApplicationsByStatus(String status) {
+        log.info("Getting applications by status: {}", status);
+        return applicationRepository.findByStatus(status).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ApplicationDTO> getApplicationsByJobAndStatus(Long jobId, String status) {
+        log.info("Getting applications by job ID: {} and status: {}", jobId, status);
+        
+        // Check if job exists
+        if (!jobPostingRepository.existsById(jobId)) {
+            throw new ResourceNotFoundException("Job posting not found with id: " + jobId);
+        }
+        
+        return applicationRepository.findByJobIdAndStatus(jobId, status).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void updateApplicationStatus(Long id, String status) {
+        log.info("Updating application status to {} for application ID: {}", status, id);
+        
+        Application application = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + id));
+        
+        // Update status and last status update date
+        application.setStatus(status);
+        application.setLastStatusUpdate(LocalDateTime.now());
+        
+        applicationRepository.save(application);
+        
+        // Send status update email
+        try {
+            String templateName = null;
+            if ("INTERVIEW".equals(status)) {
+                templateName = "INTERVIEW_INVITATION";
+            } else if ("OFFER".equals(status)) {
+                templateName = "OFFER_LETTER";
+            } else if ("REJECTED".equals(status)) {
+                templateName = "REJECTION_NOTICE";
+            }
+            
+            if (templateName != null) {
+                Map<String, String> emailParams = new HashMap<>();
+                emailParams.put("candidate_name", application.getCandidate().getFirstName() + " " + application.getCandidate().getLastName());
+                emailParams.put("job_title", application.getJob().getTitle());
+                
+                emailService.sendEmailWithTemplate(application.getCandidate().getEmail(), templateName, emailParams);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send application status update email", e);
+        }
+    }
+
+    @Override
+    public Map<String, Long> getApplicationStatsByJob(Long jobId) {
+        log.info("Getting application statistics for job ID: {}", jobId);
+        
+        // Check if job exists
+        if (!jobPostingRepository.existsById(jobId)) {
+            throw new ResourceNotFoundException("Job posting not found with id: " + jobId);
+        }
+        
+        Map<String, Long> stats = new HashMap<>();
+        
+        // Initialize with all possible statuses
+        stats.put("APPLIED", 0L);
+        stats.put("SCREENING", 0L);
+        stats.put("INTERVIEW", 0L);
+        stats.put("OFFER", 0L);
+        stats.put("HIRED", 0L);
+        stats.put("REJECTED", 0L);
+        stats.put("WITHDRAWN", 0L);
+        
+        // Get actual counts
+        List<Object[]> results = applicationRepository.countByJobIdGroupByStatus(jobId);
+        for (Object[] result : results) {
+            String status = (String) result[0];
+            Long count = (Long) result[1];
+            stats.put(status, count);
+        }
+        
+        return stats;
+    }
+
+    // Helper methods
+    private ApplicationDTO convertToDTO(Application application) {
+        ApplicationDTO applicationDTO = modelMapper.map(application, ApplicationDTO.class);
+        
+        // Set job information
+        applicationDTO.setJobId(application.getJob().getId());
+        applicationDTO.setJobTitle(application.getJob().getTitle());
+        
+        // Set candidate information
+        applicationDTO.setCandidateId(application.getCandidate().getId());
+        applicationDTO.setCandidateName(application.getCandidate().getFirstName() + " " + application.getCandidate().getLastName());
+        applicationDTO.setCandidateEmail(application.getCandidate().getEmail());
+        
+        return applicationDTO;
+    }
+}
+
+
+Created src/main/java/com/hrpipeline/service/impl/InterviewServiceImpl.java
+
+package com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.InterviewDTO;
+import com.hrpipeline.entity.Application;
+import com.hrpipeline.entity.Interview;
+import com.hrpipeline.entity.User;
+import com.hrpipeline.exception.BadRequestException;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.ApplicationRepository;
+import com.hrpipeline.repository.InterviewRepository;
+import com.hrpipeline.repository.UserRepository;
+import com.hrpipeline.service.EmailService;
+import com.hrpipeline.service.InterviewService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class InterviewServiceImpl implements InterviewService {
+
+    private final InterviewRepository interviewRepository;
+    private final ApplicationRepository applicationRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final ModelMapper modelMapper;
+
+    @Override
+    public List<InterviewDTO> getAllInterviews() {
+        log.info("Getting all interviews");
+        return interviewRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public InterviewDTO getInterviewById(Long id) {
+        log.info("Getting interview by ID: {}", id);
+        Interview interview = interviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Interview not found with id: " + id));
+        return convertToDTO(interview);
+    }
+
+    @Override
+    @Transactional
+    public InterviewDTO createInterview(InterviewDTO interviewDTO) {
+        log.info("Creating new interview for application ID: {}", interviewDTO.getApplicationId());
+        
+        // Get application
+        Application application = applicationRepository.findById(interviewDTO.getApplicationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + interviewDTO.getApplicationId()));
+        
+        // Get creator
+        User creator = userRepository.findById(interviewDTO.getCreatedById())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + interviewDTO.getCreatedById()));
+        
+        // Create interview
+        Interview interview = new Interview();
+        interview.setApplication(application);
+        interview.setInterviewType(interviewDTO.getInterviewType());
+        interview.setScheduledDate(interviewDTO.getScheduledDate());
+        interview.setDuration(interviewDTO.getDuration());
+        interview.setLocation(interviewDTO.getLocation());
+        interview.setMeetingLink(interviewDTO.getMeetingLink());
+        interview.setStatus("SCHEDULED");
+        interview.setNotes(interviewDTO.getNotes());
+        interview.setCreatedBy(creator);
+        
+        // Add participants if provided
+        if (interviewDTO.getParticipantIds() != null && !interviewDTO.getParticipantIds().isEmpty()) {
+            Set<User> participants = new HashSet<>();
+            for (Long participantId : interviewDTO.getParticipantIds()) {
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + participantId));
+                participants.add(participant);
+            }
+            interview.setParticipants(participants);
+        }
+        
+        Interview savedInterview = interviewRepository.save(interview);
+        
+        // Update application status
+        application.setStatus("INTERVIEW");
+        application.setLastStatusUpdate(LocalDateTime.now());
+        applicationRepository.save(application);
+        
+        // Send email notifications
+        sendInterviewNotifications(savedInterview);
+        
+        return convertToDTO(savedInterview);
+    }
+
+    @Override
+    @Transactional
+    public InterviewDTO updateInterview(Long id, InterviewDTO interviewDTO) {
+        log.info("Updating interview with ID: {}", id);
+        
+        Interview existingInterview = interviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Interview not found with id: " + id));
+        
+        // Update fields
+        if (interviewDTO.getInterviewType() != null) {
+            existingInterview.setInterviewType(interviewDTO.getInterviewType());
+        }
+        
+        if (interviewDTO.getScheduledDate() != null) {
+            existingInterview.setScheduledDate(interpackage com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.InterviewDTO;
+import com.hrpipeline.entity.Application;
+import com.hrpipeline.entity.Interview;
+import com.hrpipeline.entity.User;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.ApplicationRepository;
+import com.hrpipeline.repository.InterviewRepository;
+import com.hrpipeline.repository.UserRepository;
+import com.hrpipeline.service.EmailService;
+import com.hrpipeline.service.InterviewService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class InterviewServiceImpl implements InterviewService {
+
+    private final InterviewRepository interviewRepository;
+    private final ApplicationRepository applicationRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final ModelMapper modelMapper;
+
+    @Override
+    public List<InterviewDTO> getAllInterviews() {
+        log.info("Getting all interviews");
+        return interviewRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public InterviewDTO getInterviewById(Long id) {
+        log.info("Getting interview by ID: {}", id);
+        Interview interview = interviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Interview not found with id: " + id));
+        return convertToDTO(interview);
+    }
+
+    @Override
+    @Transactional
+    public InterviewDTO createInterview(InterviewDTO interviewDTO) {
+        log.info("Creating new interview for application ID: {}", interviewDTO.getApplicationId());
+        
+        Interview interview = new Interview();
+        
+        // Get application
+        Application application = applicationRepository.findById(interviewDTO.getApplicationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + interviewDTO.getApplicationId()));
+        interview.setApplication(application);
+        
+        // Set interview details
+        interview.setInterviewType(interviewDTO.getInterviewType());
+        interview.setScheduledDate(interviewDTO.getScheduledDate());
+        interview.setDuration(interviewDTO.getDuration());
+        interview.setLocation(interviewDTO.getLocation());
+        interview.setMeetingLink(interviewDTO.getMeetingLink());
+        interview.setStatus("SCHEDULED");
+        interview.setNotes(interviewDTO.getNotes());
+        
+        // Set creator
+        User creator = userRepository.findById(interviewDTO.getCreatedById())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + interviewDTO.getCreatedById()));
+        interview.setCreatedBy(creator);
+        
+        // Set participants
+        Set<User> participants = new HashSet<>();
+        if (interviewDTO.getParticipantIds() != null && !interviewDTO.getParticipantIds().isEmpty()) {
+            for (Long participantId : interviewDTO.getParticipantIds()) {
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + participantId));
+                participants.add(participant);
+            }
+        }
+        interview.setParticipants(participants);
+        
+        Interview savedInterview = interviewRepository.save(interview);
+        
+        // Update application status if needed
+        if (!"INTERVIEW".equals(application.getStatus())) {
+            application.setStatus("INTERVIEW");
+            application.setLastStatusUpdate(LocalDateTime.now());
+            applicationRepository.save(application);
+        }
+        
+        // Send email notifications
+        try {
+            // Send to candidate
+            Map<String, String> candidateParams = new HashMap<>();
+            candidateParams.put("candidate_name", application.getCandidate().getFirstName() + " " + application.getCandidate().getLastName());
+            candidateParams.put("job_title", application.getJob().getTitle());
+            candidateParams.put("interview_date", savedInterview.getScheduledDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            candidateParams.put("interview_time", savedInterview.getScheduledDate().format(DateTimeFormatter.ofPattern("HH:mm")));
+            candidateParams.put("interview_location", savedInterview.getLocation() != null ? savedInterview.getLocation() : savedInterview.getMeetingLink());
+            
+            emailService.sendEmailWithTemplate(application.getCandidate().getEmail(), "INTERVIEW_INVITATION", candidateParams);
+            
+            // Send to participants
+            for (User participant : participants) {
+                Map<String, String> participantParams = new HashMap<>(candidateParams);
+                participantParams.put("interviewer_name", participant.getFirstName() + " " + participant.getLastName());
+                emailService.sendEmail(
+                        participant.getEmail(),
+                        "Interview Assignment: " + application.getJob().getTitle(),
+                        "You have been assigned to conduct an interview for " + application.getCandidate().getFirstName() + " " +
+                                application.getCandidate().getLastName() + " for the " + application.getJob().getTitle() + " position.\n\n" +
+                                "Date: " + savedInterview.getScheduledDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "\n" +
+                                "Time: " + savedInterview.getScheduledDate().format(DateTimeFormatter.ofPattern("HH:mm")) + "\n" +
+                                "Location/Link: " + (savedInterview.getLocation() != null ? savedInterview.getLocation() : savedInterview.getMeetingLink())
+                );
+            }
+        } catch (Exception e) {
+            log.error("Failed to send interview notification emails", e);
+        }
+        
+        return convertToDTO(savedInterview);
+    }
+
+    @Override
+    @Transactional
+    public InterviewDTO updateInterview(Long id, InterviewDTO interviewDTO) {
+        log.info("Updating interview with ID: {}", id);
+        
+        Interview existingInterview = interviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Interview not found with id: " + id));
+        
+        // Update fields
+        if (interviewDTO.getInterviewType() != null) {
+            existingInterview.setInterviewType(interviewDTO.getInterviewType());
+        }
+        
+        if (interviewDTO.getScheduledDate() != null) {
+            existingInterview.setScheduledDate(interviewDTO.getScheduledDate());
+        }
+        
+        if (interviewDTO.getDuration() != null) {
+            existingInterview.setDuration(interviewDTO.getDuration());
+        }
+        
+        existingInterview.setLocation(interviewDTO.getLocation());
+        existingInterview.setMeetingLink(interviewDTO.getMeetingLink());
+        
+        if (interviewDTO.getStatus() != null) {
+            existingInterview.setStatus(interviewDTO.getStatus());
+        }
+        
+        existingInterview.setNotes(interviewDTO.getNotes());
+        
+        // Update participants if provided
+        if (interviewDTO.getParticipantIds() != null) {
+            Set<User> participants = new HashSet<>();
+            for (Long participantId : interviewDTO.getParticipantIds()) {
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + participantId));
+                participants.add(participant);
+            }
+            existingInterview.setParticipants(participants);
+        }
+        
+        Interview updatedInterview = interviewRepository.save(existingInterview);
+        return convertToDTO(updatedInterview);
+    }
+
+    @Override
+    @Transactional
+    public void deleteInterview(Long id) {
+        log.info("Deleting interview with ID: {}", id);
+        
+        if (!interviewRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Interview not found with id: " + id);
+        }
+        
+        interviewRepository.deleteById(id);
+    }
+
+    @Override
+    public List<InterviewDTO> getInterviewsByApplication(Long applicationId) {
+        log.info("Getting interviews by application ID: {}", applicationId);
+        
+        // Check if application exists
+        if (!applicationRepository.existsById(applicationId)) {
+            throw new ResourceNotFoundException("Application not found with id: " + applicationId);
+        }
+        
+        return interviewRepository.findByApplication_Id(applicationId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InterviewDTO> getInterviewsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        log.info("Getting interviews between {} and {}", startDate, endDate);
+        return interviewRepository.findByScheduledDateBetween(startDate, endDate).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InterviewDTO> getInterviewsByStatus(String status) {
+        log.info("Getting interviews by status: {}", status);
+        return interviewRepository.findByStatus(status).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InterviewDTO> getInterviewsByParticipant(Long userId) {
+        log.info("Getting interviews by participant ID: {}", userId);
+        
+        // Check if user exists
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+        
+        return interviewRepository.findByParticipantId(userId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InterviewDTO> getInterviewsByCandidate(Long candidateId) {
+        log.info("Getting interviews by candidate ID: {}", candidateId);
+        return interviewRepository.findByCandidateId(candidateId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void scheduleInterview(InterviewDTO interviewDTO) {
+        log.info("Scheduling interview for application ID: {}", interviewDTO.getApplicationId());
+        createInterview(interviewDTO);
+    }
+
+    @Override
+    @Transactional
+    public void rescheduleInterview(Long id, LocalDateTime newDate, Integer newDuration) {
+        log.info("Rescheduling interview with ID: {} to {}", id, newDate);
+        
+        Interview interview = interviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Interview not found with id: " + id));
+        
+        // Update schedule
+        interview.setScheduledDate(newDate);
+        if (newDuration != null) {
+            interview.setDuration(newDuration);
+        }
+        interview.setStatus("RESCHEDULED");
+        
+        interviewRepository.save(interview);
+        
+        // Send reschedule notifications
+        try {
+            Application application = interview.getApplication();
+            
+            // Notify candidate
+            emailService.sendEmail(
+                    application.getCandidate().getEmail(),
+                    "Interview Rescheduled: " + application.getJob().getTitle(),
+                    "Your interview for the " + application.getJob().getTitle() + " position has been rescheduled.\n\n" +
+                            "New Date: " + newDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "\n" +
+                            "New Time: " + newDate.format(DateTimeFormatter.ofPattern("HH:mm")) + "\n" +
+                            "Location/Link: " + (interview.getLocation() != null ? interview.getLocation() : interview.getMeetingLink()) + "\n\n" +
+                            "Please confirm your availability for this new time."
+            );
+            
+            // Notify participants
+            for (User participant : interview.getParticipants()) {
+                emailService.sendEmail(
+                        participant.getEmail(),
+                        "Interview Rescheduled: " + application.getJob().getTitle(),
+                        "The interview for " + application.getCandidate().getFirstName() + " " +
+                                application.getCandidate().getLastName() + " for the " + application.getJob().getTitle() + " position has been rescheduled.\n\n" +
+                                "New Date: " + newDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "\n" +
+                                "New Time: " + newDate.format(DateTimeFormatter.ofPattern("HH:mm")) + "\n" +
+                                "Location/Link: " + (interview.getLocation() != null ? interview.getLocation() : interview.getMeetingLink())
+                );
+            }
+        } catch (Exception e) {
+            log.error("Failed to send interview reschedule notifications", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void updateInterviewStatus(Long id, String status) {
+        log.info("Updating interview status to {} for interview ID: {}", status, id);
+        
+        Interview interview = interviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Interview not found with id: " + id));
+        
+        interview.setStatus(status);
+        interviewRepository.save(interview);
+        
+        // If interview is completed, update application status if necessary
+        if ("COMPLETED".equals(status)) {
+            Application application = interview.getApplication();
+            if ("INTERVIEW".equals(application.getStatus())) {
+                application.setStatus("INTERVIEW_COMPLETED");
+                application.setLastStatusUpdate(LocalDateTime.now());
+                applicationRepository.save(application);
+            }
+        }
+    }
+
+    // Helper methods
+    private InterviewDTO convertToDTO(Interview interview) {
+        InterviewDTO interviewDTO = modelMapper.map(interview, InterviewDTO.class);
+        
+        // Set application ID
+        interviewDTO.setApplicationId(interview.getApplication().getId());
+        
+        // Set candidate name
+        String candidateName = interview.getApplication().getCandidate().getFirstName() + " " + 
+                interview.getApplication().getCandidate().getLastName();
+        interviewDTO.setCandidateName(candidateName);
+        
+        // Set job title
+        interviewDTO.setJobTitle(interview.getApplication().getJob().getTitle());
+        
+        // Set created by ID and name
+        interviewDTO.setCreatedById(interview.getCreatedBy().getId());
+        interviewDTO.setCreatedByName(interview.getCreatedBy().getFirstName() + " " + interview.getCreatedBy().getLastName());
+        
+        // Set participant IDs and names
+        Set<Long> participantIds = new HashSet<>();
+        Set<String> participantNames = new HashSet<>();
+        
+        for (User participant : interview.getParticipants()) {
+            participantIds.add(participant.getId());
+            participantNames.add(participant.getFirstName() + " " + participant.getLastName());
+        }
+        
+        interviewDTO.setParticipantIds(participantIds);
+        interviewDTO.setParticipantNames(participantNames);
+        
+        return interviewDTO;
+    }
+}
+
+
+
+Created src/main/java/com/hrpipeline/service/impl/FeedbackServiceImpl.java
+
+
+package com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.FeedbackDTO;
+import com.hrpipeline.entity.Feedback;
+import com.hrpipeline.entity.Interview;
+import com.hrpipeline.entity.User;
+import com.hrpipeline.exception.BadRequestException;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.FeedbackRepository;
+import com.hrpipeline.repository.InterviewRepository;
+import com.hrpipeline.repository.UserRepository;
+import com.hrpipeline.service.FeedbackService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class FeedbackServiceImpl implements FeedbackService {
+
+    private final FeedbackRepository feedbackRepository;
+    private final InterviewRepository interviewRepository;
+    private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
+
+    @Override
+    public List<FeedbackDTO> getAllFeedback() {
+        log.info("Getting all feedback");
+        return feedbackRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public FeedbackDTO getFeedbackById(Long id) {
+        log.info("Getting feedback by ID: {}", id);
+        Feedback feedback = feedbackRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Feedback not found with id: " + id));
+        return convertToDTO(feedback);
+    }
+
+    @Override
+    @Transactional
+    public FeedbackDTO createFeedback(FeedbackDTO feedbackDTO) {
+        log.info("Creating new feedback for interview ID: {}", feedbackDTO.getInterviewId());
+        
+        // Get interview
+        Interview interview = interviewRepository.findById(feedbackDTO.getInterviewId())
+                .orElseThrow(() -> new ResourceNotFoundException("Interview not found with id: " + feedbackDTO.getInterviewId()));
+        
+        // Get user
+        User user = userRepository.findById(feedbackDTO.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + feedbackDTO.getUserId()));
+        
+        // Check if the user is a participant of the interview
+        if (!interview.getParticipants().contains(user) && !interview.getCreatedBy().equals(user)) {
+            throw new BadRequestException("User is not a participant or creator of the interview");
+        }
+        
+        // Check if the user has already provided feedback for this interview
+        List<Feedback> existingFeedback = feedbackRepository.findByInterview_Id(feedbackDTO.getInterviewId()).stream()
+                .filter(f -> f.getUser().getId().equals(feedbackDTO.getUserId()))
+                .collect(Collectors.toList());
+                
+        if (!existingFeedback.isEmpty()) {
+            throw new BadRequestException("User has already provided feedback for this interview");
+        }
+        
+        // Create feedback
+        Feedback feedback = new Feedback();
+        feedback.setInterview(interview);
+        feedback.setUser(user);
+        feedback.setTechnicalRating(feedbackDTO.getTechnicalRating());
+        feedback.setCommunicationRating(feedbackDTO.getCommunicationRating());
+        feedback.setCultureFitRating(feedbackDTO.getCultureFitRating());
+        feedback.setOverallRating(feedbackDTO.getOverallRating());
+        feedback.setComments(feedbackDTO.getComments());
+        feedback.setRecommendation(feedbackDTO.getRecommendation());
+        
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+        
+        // Update interview status if needed
+        if (!"COMPLETED".equals(interview.getStatus())) {
+            interview.setStatus("COMPLETED");
+            interviewRepository.save(interview);
+        }
+        
+        return convertToDTO(savedFeedback);
+    }
+
+    @Override
+    @Transactional
+    public FeedbackDTO updateFeedback(Long id, FeedbackDTO feedbackDTO) {
+        log.info("Updating feedback with ID: {}", id);
+        
+        Feedback existingFeedback = feedbackRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Feedback not found with id: " + id));
+        
+        // Update fields
+        if (feedbackDTO.getTechnicalRating() != null) {
+            existingFeedback.setTechnicalRating(feedbackDTO.getTechnicalRating());
+        }
+        
+        if (feedbackDTO.getCommunicationRating() != null) {
+            existingFeedback.setCommunicationRating(feedbackDTO.getCommunicationRating());
+        }
+        
+        if (feedbackDTO.getCultureFitRating() != null) {
+            existingFeedback.setCultureFitRating(feedbackDTO.getCultureFitRating());
+        }
+        
+        if (feedbackDTO.getOverallRating() != null) {
+            existingFeedback.setOverallRating(feedbackDTO.getOverallRating());
+        }
+        
+        if (feedbackDTO.getComments() != null) {
+            existingFeedback.setComments(feedbackDTO.getComments());
+        }
+        
+        if (feedbackDTO.getRecommendation() != null) {
+            existingFeedback.setRecommendation(feedbackDTO.getRecommendation());
+        }
+        
+        Feedback updatedFeedback = feedbackRepository.save(existingFeedback);
+        return convertToDTO(updatedFeedback);
+    }
+
+    @Override
+    @Transactional
+    public void deleteFeedback(Long id) {
+        log.info("Deleting feedback with ID: {}", id);
+        
+        if (!feedbackRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Feedback not found with id: " + id);
+        }
+        
+        feedbackRepository.deleteById(id);
+    }
+
+    @Override
+    public List<FeedbackDTO> getFeedbackByInterview(Long interviewId) {
+        log.info("Getting feedback by interview ID: {}", interviewId);
+        
+        // Check if interview exists
+        if (!interviewRepository.existsById(interviewId)) {
+            throw new ResourceNotFoundException("Interview not found with id: " + interviewId);
+        }
+        
+        return feedbackRepository.findByInterview_Id(interviewId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<FeedbackDTO> getFeedbackByUser(Long userId) {
+        log.info("Getting feedback by user ID: {}", userId);
+        
+        // Check if user exists
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+        
+        return feedbackRepository.findByUser_Id(userId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<FeedbackDTO> getFeedbackByApplication(Long applicationId) {
+        log.info("Getting feedback by application ID: {}", applicationId);
+        return feedbackRepository.findByApplicationId(applicationId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<FeedbackDTO> getFeedbackByCandidate(Long candidateId) {
+        log.info("Getting feedback by candidate ID: {}", candidateId);
+        return feedbackRepository.findByCandidateId(candidateId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Double getAverageRatingByApplication(Long applicationId) {
+        log.info("Getting average rating for application ID: {}", applicationId);
+        Double averageRating = feedbackRepository.getAverageRatingByApplicationId(applicationId);
+        return averageRating != null ? averageRating : 0.0;
+    }
+
+    // Helper methods
+    private FeedbackDTO convertToDTO(Feedback feedback) {
+        FeedbackDTO feedbackDTO = modelMapper.map(feedback, FeedbackDTO.class);
+        
+        // Set interview ID
+        feedbackDTO.setInterviewId(feedback.getInterview().getId());
+        
+        // Set candidate name
+        String candidateName = feedback.getInterview().getApplication().getCandidate().getFirstName() + " " + 
+                feedback.getInterview().getApplication().getCandidate().getLastName();
+        feedbackDTO.setCandidateName(candidateName);
+        
+        // Set job title
+        feedbackDTO.setJobTitle(feedback.getInterview().getApplication().getJob().getTitle());
+        
+        // Set user ID and name
+        feedbackDTO.setUserId(feedback.getUser().getId());
+        feedbackDTO.setUserName(feedback.getUser().getFirstName() + " " + feedback.getUser().getLastName());
+        
+        return feedbackDTO;
+    }
+}
+
+
+Created src/main/java/com/hrpipeline/service/impl/DocumentServiceImpl.java
+
+package com.hrpipeline.service.impl;
+
+import com.hrpipeline.dto.DocumentDTO;
+import com.hrpipeline.entity.Candidate;
+import com.hrpipeline.entity.Document;
+import com.hrpipeline.entity.User;
+import com.hrpipeline.exception.BadRequestException;
+import com.hrpipeline.exception.ResourceNotFoundException;
+import com.hrpipeline.repository.CandidateRepository;
+import com.hrpipeline.repository.DocumentRepository;
+import com.hrpipeline.repository.UserRepository;
+import com.hrpipeline.service.DocumentService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class DocumentServiceImpl implements DocumentService {
+
+    private final DocumentRepository documentRepository;
+    private final CandidateRepository candidateRepository;
+    private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
+
+    @Value("${file.upload-dir}")
+    private String uploadDir;
+
+    @Override
+    public List<DocumentDTO> getAllDocuments() {
+        log.info("Getting all documents");
+        return documentRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public DocumentDTO getDocumentById(Long id) {
+        log.info("Getting document by ID: {}", id);
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + id));
+        return convertToDTO(document);
+    }
+
+    @Override
+    @Transactional
+    public DocumentDTO createDocument(DocumentDTO documentDTO, MultipartFile file) {
+        log.info("Creating new document for candidate ID: {}", documentDTO.getCandidateId());
+        
+        if (file.isEmpty()) {
+            throw new BadRequestException("File cannot be empty");
+        }
+        
+        // Get candidate
+        Candidate candidate = candidateRepository.findById(documentDTO.getCandidateId())
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found with id: " + documentDTO.getCandidateId()));
+        
+        // Get uploader if provided
+        User uploadedBy = null;
+        if (documentDTO.getUploadedById() != null) {
+            uploadedBy = userRepository.findById(documentDTO.getUploadedById())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + documentDTO.getUploadedById()));
+        }
+        
+        // Save file
+        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+        String fileExtension = "";
+        if (fileName.contains(".")) {
+            fileExtension = fileName.substring(fileName.lastIndexOf("."));
+        }
+        
+        String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+        String relativePath = candidate.getId() + "/" + uniqueFileName;
+        String absolutePath = uploadDir + "/" + relativePath;
+        
+        try {
+            // Create directories if they don't exist
+            Path uploadPath = Paths.get(uploadDir + "/" + candidate.getId());
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            
+            // Copy file to the target location
+            Path targetLocation = Paths.get(absolutePath);
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            
+            // Create document entity
+            Document document = new Document();
+            document.setCandidate(candidate);
+            document.setDocumentName(documentDTO.getDocumentName());
+            document.setDocumentType(documentDTO.getDocumentType());
+            document.setFilePath(relativePath);
+            document.setUploadDate(LocalDateTime.now());
+            document.setUploadedBy(uploadedBy);
+            
+            Document savedDocument = documentRepository.save(document);
+            return convertToDTO(savedDocument);
+            
+        } catch (IOException e) {
+            log.error("Failed to save document file", e);
+            throw new BadRequestException("Failed to save document file: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public DocumentDTO updateDocument(Long id, DocumentDTO documentDTO) {
+        log.info("Updating document with ID: {}", id);
+        
+        Document existingDocument = documentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + id));
+        
+        // Update fields
+        if (documentDTO.getDocumentName() != null) {
+            existingDocument.setDocumentName(documentDTO.getDocumentName());
+        }
+        
+        if (documentDTO.getDocumentType() != null) {
+            existingDocument.setDocumentType(documentDTO.getDocumentType());
+        }
+        
+        Document updatedDocument = documentRepository.save(existingDocument);
+        return convertToDTO(updatedDocument);
+    }
+
+    @Override
+    @Transactional
+    public void deleteDocument(Long id) {
+        log.info("Deleting document with ID: {}", id);
+        
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + id));
+        
+        // Delete file from file system
+        try {
+            Path filePath = Paths.get(uploadDir + "/" + document.getFilePath());
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            log.error("Failed to delete document file", e);
+        }
+        
+        // Delete document from database
+        documentRepository.delete(document);
+    }
+
+    @Override
+    public List<DocumentDTO> getDocumentsByCandidate(Long candidateId) {
+        log.info("Getting documents by candidate ID: {}", candidateId);
+        
+        // Check if candidate exists
+        if (!candidateRepository.existsById(candidateId)) {
+            throw new ResourceNotFoundException("Candidate not found with id: " + candidateId);
+        }
+        
+        return documentRepository.findByCandidate_Id(candidateId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<DocumentDTO> getDocumentsByType(String documentType) {
+        log.info("Getting documents by type: {}", documentType);
+        return documentRepository.findByDocumentType(documentType).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<DocumentDTO> getDocumentsByUploader(Long userId) {
+        log.info("Getting documents by uploader ID: {}", userId);
+        
+        // Check if user exists
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+        
+        return documentRepository.findByUploadedBy_Id(userId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public byte[] getDocumentContent(Long id) {
+        log.info("Getting document content for ID: {}", id);
+        
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found with id: " + id));
+        
+        try {
+            Path filePath = Paths.get(uploadDir + "/" + document.getFilePath());
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            log.error("Failed to read document file", e);
+            throw new BadRequestException("Failed to read document file: " + e.getMessage());
+        }
+    }
+
+    // Helper methods
+    private DocumentDTO convertToDTO(Document document) {
+        DocumentDTO documentDTO = modelMapper.map(document, DocumentDTO.class);
+        
+        // Set candidate ID and name
+        documentDTO.setCandidateId(document.getCandidate().getId());
+        documentDTO.setCandidateName(document.getCandidate().getFirstName() + " " + document.getCandidate().getLastName());
+        
+        // Set uploaded by ID and name if available
+        if (document.getUploadedBy() != null) {
+            documentDTO.setUploadedById(document.getUploadedBy().getId());
+            documentDTO.setUploadedByName(document.getUploadedBy().getFirstName() + " " + document.getUploadedBy().getLastName());
+        }
+        
+        return documentDTO;
+    }
+}
+
+
+
+
+
