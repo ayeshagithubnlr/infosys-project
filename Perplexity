@@ -1,0 +1,39 @@
+// src/app/dashboard/dashboard.service.ts
+import { Injectable } from '@angular/core';
+import { Observable, of } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class DashboardService {
+  getJobListings(): Observable<any[]> {
+    return of([
+      { title: 'Software Engineer', location: 'New York', department: 'Engineering' },
+      { title: 'Marketing Specialist', location: 'San Francisco CA', department: 'Marketing' },
+      { title: 'HR Coordinator', location: 'Boston, MA', department: 'Human Resources' }
+    ]);
+  }
+  getApplications(): Observable<any[]> {
+    return of([
+      { title: 'Data Analyst', status: 'Applied' },
+      { title: 'Frontend Developer', status: 'Shortlisted' },
+      { title: 'Product Manager', status: 'Rejected' },
+      { title: 'Project Manager', status: 'Moved' }
+    ]);
+  }
+  getInterviewSchedule(): Observable<any[]> {
+    return of([
+      { title: 'UI/UX Designer', date: 'Apr-2025' },
+      { title: 'Systems Administrator', date: '' }
+    ]);
+  }
+  getMessages(): Observable<any[]> {
+    return of([
+      { text: 'Your application for the Frontend Developer position has been shortlisted.', link: 'Frontend Developer' },
+      { text: 'Reminder. Interview scheduled for the UI/UX Designer position.', link: 'UI/UX Designer' }
+    ]);
+  }
+  getProfileSummary(): Observable<any[]> {
+    return of(['Resume', 'Skills', 'Experience']);
+  }
+}
