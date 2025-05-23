@@ -37,3 +37,271 @@ export class DashboardService {
     return of(['Resume', 'Skills', 'Experience']);
   }
 }
+
+
+
+css
+
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  background: #fafbfc;
+}
+
+.sidebar {
+  width: 220px;
+  background: #23272f;
+  color: #fff;
+  padding: 24px 0;
+}
+
+.sidebar-header {
+  font-size: 1.4em;
+  font-weight: bold;
+  margin-bottom: 40px;
+  padding-left: 24px;
+}
+
+.sidebar nav ul {
+  list-style: none;
+  padding: 0 24px;
+}
+
+.sidebar nav ul li {
+  margin: 18px 0;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.main-content {
+  flex: 1;
+  padding: 32px 48px;
+  background: #fff;
+}
+
+.main-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.candidate-title {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-right: 40px;
+}
+
+.search-bar {
+  flex: 1;
+  margin-right: 24px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.profile-icon mat-icon {
+  font-size: 36px;
+  color: #2b2f36;
+}
+
+.dashboard-sections {
+  display: flex;
+  gap: 40px;
+}
+
+.job-listings {
+  flex: 2;
+  background: #f3f4f8;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.job-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.job-dept {
+  font-size: 0.9em;
+  color: #7a7a7a;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.my-applications, .interview-schedule, .profile-summary {
+  background: #f3f4f8;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.my-applications ul, .interview-schedule ul, .profile-summary ul {
+  list-style: none;
+  padding: 0;
+}
+
+.status {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.9em;
+}
+
+.status.applied { background: #e3eafc; color: #3b5bdb; }
+.status.shortlisted { background: #e6fcf5; color: #099268; }
+.status.rejected { background: #fff0f6; color: #e03131; }
+.status.moved { background: #ebfbee; color: #087f5b; }
+
+.messages {
+  margin-top: 32px;
+  background: #f3f4f8;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.messages ul {
+  list-style: none;
+  padding: 0;
+}
+
+.messages li {
+  margin-bottom: 10px;
+  font-size: 1em;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #1976d2;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+
+
+html<div class="dashboard-container">
+  <aside class="sidebar">
+    <div class="sidebar-header">Dashboard</div>
+    <nav>
+      <ul>
+        <li>Job Listings</li>
+        <li>My Applications</li>
+        <li>Interview Schedule</li>
+        <li>Messages</li>
+        <li>Settings</li>
+      </ul>
+    </nav>
+  </aside>
+  <main class="main-content">
+    <header class="main-header">
+      <span class="candidate-title">Candidate</span>
+      <input type="text" class="search-bar" placeholder="Search..." />
+      <span class="profile-icon">
+        <span class="material-icons">account_circle</span>
+      </span>
+    </header>
+    <section class="dashboard-sections">
+      <div class="job-listings">
+        <h2>Job Listings</h2>
+        <div class="filters">
+          <input type="text" placeholder="Search..." />
+          <select>
+            <option>Location</option>
+          </select>
+          <select>
+            <option>Department</option>
+          </select>
+        </div>
+        <div class="job-card" *ngFor="let job of jobs">
+          <div>
+            <strong>{{ job.title }}</strong>
+            <span>{{ job.location }}</span>
+            <div class="job-dept">{{ job.department }}</div>
+          </div>
+          <button class="apply-btn">Apply</button>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div class="my-applications">
+          <h3>My Applications</h3>
+          <ul>
+            <li *ngFor="let app of applications">
+              {{ app.title }} <span class="status">{{ app.status }}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="interview-schedule">
+          <h3>Interview Schedule</h3>
+          <ul>
+            <li *ngFor="let interview of interviews">
+              {{ interview.title }} <span>{{ interview.date }}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="profile-summary">
+          <h3>Profile Summary</h3>
+          <ul>
+            <li *ngFor="let item of profileSummary">{{ item }}</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+    <section class="messages">
+      <h3>Messages</h3>
+      <ul>
+        <li *ngFor="let msg of messages">
+          • {{ msg.text }}
+        </li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+
+
+
+tsimport { Component, OnInit } from '@angular/core';
+import { DashboardService } from './dashboard.service';
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  jobs = [];
+  applications = [];
+  interviews = [];
+  messages = [];
+  profileSummary = [];
+
+  constructor(private dashboardService: DashboardService) {}
+
+  ngOnInit() {
+    this.dashboardService.getJobListings().subscribe(data => this.jobs = data);
+    this.dashboardService.getApplications().subscribe(data => this.applications = data);
+    this.dashboardService.getInterviewSchedule().subscribe(data => this.interviews = data);
+    this.dashboardService.getMessages().subscribe(data => this.messages = data);
+    this.dashboardService.getProfileSummary().subscribe(data => this.profileSummary = data);
+  }
+}
+
+
